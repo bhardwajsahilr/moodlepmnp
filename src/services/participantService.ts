@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { Participant, ParticipantTraining } from '../types';
+import type { Participant, ParticipantTraining, Certificate } from '../types';
 import { mockParticipants } from '../data/mockData';
 
 const FUNCTIONS_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
@@ -93,5 +93,15 @@ export const participantService = {
     return callFunction<{ loginUrl: string; method: 'userkey' | 'direct' }>(
       'moodle-autologin', { participantId, targetUrl },
     );
+  },
+
+  async getCertificates(participantId: string): Promise<Certificate[]> {
+    const { data, error } = await supabase
+      .from('certificates')
+      .select('*')
+      .eq('participant_id', participantId)
+      .order('issued_at', { ascending: false });
+    if (error || !data) return [];
+    return data as Certificate[];
   },
 };

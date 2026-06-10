@@ -109,6 +109,16 @@ export interface MoodleSettings {
   updated_at: string;
 }
 
+export interface Certificate {
+  id: string;
+  participant_id: string;
+  training_title: string;
+  issued_at: string;
+  certificate_number: string;
+  certificate_url: string;
+  created_at: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;

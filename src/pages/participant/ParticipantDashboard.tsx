@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { ExternalLink, GraduationCap, BookOpen, Award, Loader2, RefreshCw } from 'lucide-react';
+import { ExternalLink, GraduationCap, BookOpen, Award, Loader2, RefreshCw, Download, Calendar, Hash } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card } from '../../components/ui/Card';
@@ -8,7 +8,18 @@ import { Toast, useToast } from '../../components/ui/Toast';
 import { participantService } from '../../services/participantService';
 import { moodleService } from '../../services/moodleService';
 import { useAuth } from '../../context/AuthContext';
-import type { Participant, CourseMapping, ParticipantTraining } from '../../types';
+import type { Participant, CourseMapping, ParticipantTraining, Certificate } from '../../types';
+
+const TRAINING_LABELS: Record<string, string> = {
+  NLG:  'Nutrition in the Life Cycle and Growth',
+  SBC:  'Social and Behavior Change',
+  DQC:  'Data Quality and Communication',
+  NPHC: 'National Population and Health Commission',
+  HCSC: 'Health and Community Service Capacitation',
+  SE:   'Service Excellence',
+  TS:   'Technical Skills',
+  PMS:  'Program Management Skills',
+};
 
 const TRAINING_STATUS_MAP: Array<{ field: keyof Participant; title: string }> = [
   { field: 'nlg_status', title: 'NLG' },
@@ -55,11 +66,16 @@ function buildPlaceholders(p: Participant, cm: CourseMapping[]): ParticipantTrai
   return [];
 }
 
+function formatDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString('en-PH', { year: 'numeric', month: 'long', day: 'numeric' });
+}
+
 export function ParticipantDashboard() {
   const { user } = useAuth();
   const [participant, setParticipant] = useState<Participant | null>(null);
   const [courseMappings, setCourseMappings] = useState<CourseMapping[]>([]);
   const [enrollments, setEnrollments] = useState<ParticipantTraining[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [launchingCourseId, setLaunchingCourseId] = useState<string | null>(null);
@@ -69,13 +85,15 @@ export function ParticipantDashboard() {
     const resolvedParticipant = p ?? participant;
     if (!resolvedParticipant) return;
 
-    const [pts, cm] = await Promise.all([
+    const [pts, cm, certs] = await Promise.all([
       participantService.getParticipantTrainings(resolvedParticipant.id),
       moodleService.getCourseMappings(),
+      participantService.getCertificates(resolvedParticipant.id),
     ]);
 
     setCourseMappings(cm);
     setEnrollments(pts.length > 0 ? pts : buildPlaceholders(resolvedParticipant, cm));
+    setCertificates(certs);
   }, [participant]);
 
   useEffect(() => {
@@ -280,6 +298,82 @@ export function ParticipantDashboard() {
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {completed.map((e, idx) => <CourseCard key={e.id} e={e} idx={idx} />)}
               </div>
+            </div>
+          )}
+
+          {/* Certificates */}
+          {participant && (
+            <div>
+              <div className="mb-3">
+                <h2 className="text-sm font-semibold text-gray-900">My Certificates</h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {certificates.length > 0
+                    ? `${certificates.length} certificate${certificates.length !== 1 ? 's' : ''} earned`
+                    : 'Complete a training to earn your certificate'}
+                </p>
+              </div>
+
+              {certificates.length === 0 ? (
+                <Card>
+                  <div className="text-center py-8">
+                    <Award className="w-10 h-10 text-gray-200 mx-auto mb-3" />
+                    <p className="text-sm font-medium text-gray-500">No certificates yet</p>
+                    <p className="text-xs text-gray-400 mt-1">Your certificates will appear here once a training is completed and verified.</p>
+                  </div>
+                </Card>
+              ) : (
+                <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {certificates.map((cert, idx) => (
+                    <motion.div
+                      key={cert.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: idx * 0.06 }}
+                      className="relative bg-white rounded-xl border border-amber-100 shadow-sm overflow-hidden"
+                    >
+                      <div className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-300" />
+                      <div className="p-5">
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
+                            <Award className="w-5 h-5 text-amber-500" />
+                          </div>
+                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                            Certificate
+                          </span>
+                        </div>
+
+                        <p className="text-sm font-bold text-gray-900 mb-0.5">{cert.training_title}</p>
+                        <p className="text-xs text-gray-500 mb-4 leading-snug">
+                          {TRAINING_LABELS[cert.training_title] ?? cert.training_title}
+                        </p>
+
+                        <div className="space-y-1.5 mb-4">
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                            <span>Issued: <span className="font-medium text-gray-700">{formatDate(cert.issued_at)}</span></span>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                            <Hash className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                            <span className="font-mono font-medium text-gray-700 tracking-tight">{cert.certificate_number}</span>
+                          </div>
+                        </div>
+
+                        {cert.certificate_url ? (
+                          <a href={cert.certificate_url} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" variant="secondary" className="w-full" icon={<Download className="w-3.5 h-3.5" />}>
+                              Download Certificate
+                            </Button>
+                          </a>
+                        ) : (
+                          <Button size="sm" variant="secondary" className="w-full" disabled>
+                            Certificate on file
+                          </Button>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>

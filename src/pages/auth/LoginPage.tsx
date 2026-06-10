@@ -118,11 +118,22 @@ export function LoginPage() {
 
           {/* Demo credentials notice */}
           <div className="mt-6 p-3 bg-secondary-50 rounded-xl border border-secondary/20">
-            <p className="text-xs font-semibold text-secondary mb-2">Demo Credentials</p>
+            <p className="text-xs font-semibold text-secondary mb-2">Demo Credentials — click to fill</p>
             <div className="space-y-1 text-xs text-gray-600">
-              <p><span className="font-medium">Admin:</span> admin@pmnp.gov.ph / Admin@1234</p>
-              <p><span className="font-medium">Manager:</span> manager@pmnp.gov.ph / Manager@1234</p>
-              <p><span className="font-medium">Participant:</span> Use registered email</p>
+              {[
+                { label: 'Admin', email: 'admin@pmnp.gov.ph', password: 'Admin@1234' },
+                { label: 'Manager', email: 'manager@pmnp.gov.ph', password: 'Manager@1234' },
+                { label: 'Participant', email: 'gabriel@gmail.com', password: 'uG5g!L6Kc' },
+              ].map(({ label, email: e, password: pw }) => (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => { setEmail(e); setPassword(pw); }}
+                  className="w-full text-left px-2 py-1 rounded hover:bg-secondary/10 transition-colors"
+                >
+                  <span className="font-medium">{label}:</span> {e} / {pw}
+                </button>
+              ))}
             </div>
           </div>
         </motion.div>
